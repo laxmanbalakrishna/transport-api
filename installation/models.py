@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models
 from users.models import Branch
 
@@ -34,3 +36,11 @@ class VehicleInstallation(models.Model):
     class Meta:
         verbose_name = 'Vehicle Installation'
         verbose_name_plural = 'Vehicle Installations'
+
+class VehicleToken(models.Model):
+    vehicle = models.OneToOneField(VehicleInstallation, on_delete=models.CASCADE)
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+
+
+    def __str__(self):
+        return f"Token for {self.vehicle.registration_number}"

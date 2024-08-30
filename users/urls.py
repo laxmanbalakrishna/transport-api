@@ -2,11 +2,14 @@ from django.urls import path
 
 from installation.views import RecentVehicleInstallationView
 from .views import (UserRegistrationView, LoginView, BranchCRUDView, ListManagersView, ContactAdminView,
-                    ListContactAttemptsView, AdminNotificationView)
+                    ListContactAttemptsView, AdminNotificationView, UserUpdateView, )
 
 urlpatterns = [
     path('register/',  UserRegistrationView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
+    # path('send-otp/', SendOTPView.as_view(), name='send_otp'),
+    # path('verify-otp/', VerifyOTPView.as_view(), name='verify_otp'),
+    path('users/update/<uuid:pk>/', UserUpdateView.as_view(), name='user-update'),
     # URL pattern for listing all branches or creating a new branch
     path('branches/', BranchCRUDView.as_view(), name='branch-list-create'),
 

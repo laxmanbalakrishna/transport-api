@@ -3,13 +3,18 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model, authenticate
-from .serializers import CustomUserSerializer, LoginSerializer, BranchSerializer, ManagerSerializer, \
-    ContactAttemptSerializer, NotificationSerializer
+
+from installation.models import VehicleInstallation
+from .serializers import (CustomUserSerializer, LoginSerializer, BranchSerializer, ManagerSerializer,
+                          ContactAttemptSerializer, NotificationSerializer, CustomUserUpdateSerializer)
 from .models import UserTypes, Branch, ContactAttempt, CustomUser, Notification
 from rest_framework.authtoken.models import Token
 from installation.utils import IsAdminUser, IsAdminOrManager
 from django.shortcuts import get_object_or_404
-from django.core.mail import send_mail
+from django.core.mail import send_mail, BadHeaderError
+from smtplib import SMTPException
+
+
 
 
 class UserRegistrationView(APIView):
@@ -29,6 +34,7 @@ class UserRegistrationView(APIView):
             user = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class LoginView(APIView):
@@ -63,6 +69,19 @@ class LoginView(APIView):
             return Response({"non_field_errors": ["Invalid email or password."]}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserUpdateView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrManager]
+
+    def patch(self, request, pk, *args, **kwargs):
+        user = get_object_or_404(CustomUser, pk=pk)
+        serializer = CustomUserUpdateSerializer(user, data=request.data, partial=True, context={'request': request})
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 class BranchCRUDView(APIView):
@@ -119,15 +138,11 @@ class ListManagersView(APIView):
 
 
 class ContactAdminView(APIView):
-    """
-    View to allow Managers to contact the Admin.
-    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
 
-        # Check if the user is a Manager
         try:
             user_type = UserTypes.objects.get(user=user).user_type
         except UserTypes.DoesNotExist:
@@ -140,27 +155,34 @@ class ContactAdminView(APIView):
         if serializer.is_valid():
             contact_attempt = serializer.save()
 
-            # Notify the specific admin
-            self.notify_admin(contact_attempt)
+            # Attempt to notify the admin
+            email_sent = self.notify_admin(contact_attempt)
 
-            return Response({'message': 'Your message has been sent to the Admin.'}, status=status.HTTP_201_CREATED)
+            if email_sent:
+                return Response({'message': 'Your message has been sent to the Admin.'}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'message': 'Failed to send the message to the Admin.'},
+                                status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def notify_admin(self, contact_attempt):
-
-        # Create a notification for the specific admin
-        Notification.objects.create(
-            user=contact_attempt.admin,
-            message=f"Manager {contact_attempt.user.username} sent a message: {contact_attempt.message}"
-        )
-
-        # Send an email to the specific admin
-        send_mail(
-            'New Contact Attempt by Manager',
-            f"Manager {contact_attempt.user.username} sent the following message:\n\n{contact_attempt.message}",
-            'from@example.com',
-            [contact_attempt.admin.email]
-        )
+        try:
+            send_mail(
+                'New Contact Attempt by Manager',
+                f"Manager {contact_attempt.user.username} sent the following message:\n\n{contact_attempt.message}",
+                'balakrishnagujjeti9@gmail.com',
+                [contact_attempt.admin.email],
+                fail_silently=False,
+            )
+            # Create notification if email was successful
+            Notification.objects.create(
+                user=contact_attempt.admin,
+                message=f"Manager {contact_attempt.user.username} sent a message: {contact_attempt.message}"
+            )
+            return True
+        except (BadHeaderError, SMTPException):
+            return False
 
 
 class ListContactAttemptsView(APIView):
@@ -190,7 +212,7 @@ class ListContactAttemptsView(APIView):
 
 class AdminNotificationView(APIView):
     """
-    View to list all notifications for an logged-in Admin and mark them as read.
+    View to list all notifications for a logged-in Admin and mark them as read.
     """
     permission_classes = [IsAuthenticated]
 
@@ -206,11 +228,24 @@ class AdminNotificationView(APIView):
         if user_type != 'Admin':
             return Response({'message': 'Only Admins can view notifications.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Get notifications only for the logged-in admin
-        notifications = Notification.objects.filter(user=user, is_read=False)
-        serializer = NotificationSerializer(notifications, many=True)
+        try:
+            # Get notifications only for the logged-in admin
+            notifications = Notification.objects.filter(user=user, is_read=False)
+            # print("Number of unread notifications:", notifications.count())  # Debug print
+            # print("Notifications retrieved:", notifications)  # Debug print
 
-        # Mark notifications as read
-        notifications.update(is_read=True)
+            if not notifications.exists():
+                return Response({'message': 'No unread notifications.'}, status=status.HTTP_200_OK)
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            serializer = NotificationSerializer(notifications, many=True)
+            print("Serialized data:", serializer.data)  # Debug print
+
+            # Mark notifications as read
+            notifications.update(is_read=True)
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+

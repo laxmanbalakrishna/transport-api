@@ -4,14 +4,16 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, PermissionDenied
 from django.http import HttpResponse
-
 from users.models import Branch
 from users.serializers import BranchSerializer
-from .models import VehicleInstallation
-from .serializers import VehicleInstallationSerializer, RecentVehicleInstallationSerializer
+from users.utils import generate_otp, send_otp_via_twilio, verify_otp
+from .models import VehicleInstallation, VehicleToken
+from .serializers import VehicleInstallationSerializer, RecentVehicleInstallationSerializer, OTPRequestSerializer, \
+    OTPVerifySerializer
 from .utils import IsAdminUser, IsAdminOrManager
 from django.db.models import Max
 from users.models import UserTypes
+from rest_framework.authtoken.models import Token
 
 
 class CreateInstallationView(APIView):
@@ -111,6 +113,62 @@ class DeleteInstallationView(APIView):
             return Response({'message': f'Vehicle Installation with given id:{pk} not found'},
                             status=status.HTTP_404_NOT_FOUND)
 
+# Normal users otp based login view
+class SendOTPView(APIView):
+    def post(self, request):
+        serializer = OTPRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            contact_number = serializer.validated_data['contact_number']
+            otp = generate_otp(contact_number)
+            send_otp_via_twilio(contact_number, otp)
+            return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# class VerifyOTPView(APIView):
+#     def post(self, request):
+#         serializer = OTPVerifySerializer(data=request.data)
+#         if serializer.is_valid():
+#             contact_number = serializer.validated_data['contact_number']
+#             otp = serializer.validated_data['otp']
+#             if verify_otp(contact_number, otp):
+#                 try:
+#                     vehicle = VehicleInstallation.objects.get(contact_number=contact_number)
+#                     # user = CustomUser.objects.get(contact_number=contact_number)
+#                     token, created = Token.objects.get_or_create(vehicle=vehicle)
+#                     return Response({"token": token.key, "vehicle_id": vehicle.id}, status=status.HTTP_200_OK)
+#                 except CustomUser.DoesNotExist:
+#                     return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+#             return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOTPView(APIView):
+    def post(self, request):
+        serializer = OTPVerifySerializer(data=request.data)
+        if serializer.is_valid():
+            contact_number = serializer.validated_data['contact_number']
+            otp = serializer.validated_data['otp']
+            if verify_otp(contact_number, otp):
+                try:
+                    # Fetch the vehicle installation associated with the contact number
+                    vehicle = VehicleInstallation.objects.get(contact_number=contact_number)
+
+                    # Create or get a token for VehicleToken model
+                    token, created = VehicleToken.objects.get_or_create(vehicle=vehicle)
+
+                    # Instead of creating a token, just return the vehicle data
+                    return Response({
+                        "message": "OTP verified successfully.",
+                        "token": token.token,
+                        "vehicle_id": vehicle.id,
+                        "registration_number": vehicle.registration_number,
+                        "status": vehicle.status
+                    }, status=status.HTTP_200_OK)
+                except VehicleInstallation.DoesNotExist:
+                    return Response({"error": "Vehicle not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# end of Normal users otp based login views
 
 class RecentVehicleInstallationView(APIView):
     """

@@ -23,6 +23,21 @@ class VehicleInstallationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid vehicle class selected.")
         return value
 
+# For Normal users Otp based login
+class OTPRequestSerializer(serializers.Serializer):
+    contact_number = serializers.CharField(max_length=15)
+
+    def validate_contact_number(self, value):
+        if not VehicleInstallation.objects.filter(contact_number=value).exists():
+            raise serializers.ValidationError("Contact number is not registered.")
+        return value
+
+class OTPVerifySerializer(serializers.Serializer):
+    contact_number = serializers.CharField(max_length=15)
+    otp = serializers.CharField(max_length=6)
+
+# end for serializers for normal user login
+
 
 class RecentVehicleInstallationSerializer(serializers.ModelSerializer):
     branch = BranchSerializer(read_only=True)

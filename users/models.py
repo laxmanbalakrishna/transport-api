@@ -12,6 +12,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, unique=True)
     email = models.EmailField(unique=True)
+    contact_number = models.CharField(max_length=15, unique=True, null=True, blank=True)
     date_of_joining = models.DateTimeField(auto_now_add=True, null=True)
     salary_details = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
@@ -42,7 +43,7 @@ class UserTypes(models.Model):
 
     # Enforce a one-to-one relationship between Manager and Branch
     branch = models.OneToOneField(
-        'Branch', on_delete=models.CASCADE, null=True, blank=True, unique=True
+        'Branch', on_delete=models.SET_NULL, null=True, blank=True, unique=True
     )
 
     def __str__(self):
