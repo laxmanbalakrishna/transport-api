@@ -100,16 +100,18 @@ class LoginSerializer(serializers.Serializer):
 class CustomUserUpdateSerializer(serializers.ModelSerializer):
     user_type = serializers.CharField(write_only=True, required=False)
     branch = serializers.IntegerField(write_only=True, required=False, allow_null=True)
+    contact_number = serializers.CharField(required=False, allow_blank=True)  # Added contact_number field
 
     class Meta:
         model = CustomUser
-        fields = ['id', 'email', 'username', 'password', 'date_of_joining', 'salary_details', 'user_type', 'branch']
+        fields = ['id', 'email', 'username', 'password', 'date_of_joining', 'salary_details', 'user_type', 'branch', 'contact_number']
         extra_kwargs = {
             'password': {'write_only': True, 'required': False},
             'email': {'required': False},
             'username': {'required': False},
             'date_of_joining': {'required': False},
             'salary_details': {'required': False},
+            'contact_number': {'required': False},  # Added extra_kwargs for contact_number
         }
 
     def validate(self, data):
@@ -132,12 +134,12 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
                 errors['branch'] = "You cannot change your own branch."
 
             if request_user_type_instance.user_type == 'Admin':
-                for field in ['date_of_joining', 'salary_details']:
+                for field in ['date_of_joining', 'salary_details', 'contact_number']:
                     if field in data:
                         errors[field] = f"{field.replace('_', ' ').title()} cannot be changed by Admins."
 
             elif request_user_type_instance.user_type == 'Manager':
-                for field in ['date_of_joining', 'salary_details', 'user_type', 'branch']:
+                for field in ['date_of_joining', 'salary_details', 'user_type', 'branch', 'contact_number']:
                     if field in data:
                         errors[field] = f"{field.replace('_', ' ').title()} cannot be changed by Managers."
 
@@ -196,8 +198,10 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
             representation['branch'] = None
 
         representation['salary_details'] = instance.salary_details
+        representation['contact_number'] = instance.contact_number  # Added contact_number to representation
 
         return representation
+
 
 
 
@@ -241,3 +245,16 @@ class NotificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notification
         fields = ['id', 'message', 'created_at', 'is_read']
+
+
+class OTPRequestUserSerializer(serializers.Serializer):
+    contact_number = serializers.CharField(max_length=15)
+
+    def validate_contact_number(self, value):
+        if not CustomUser.objects.filter(contact_number=value).exists():
+            raise serializers.ValidationError("Contact number is not registered.")
+        return value
+
+class OTPVerifyUserSerializer(serializers.Serializer):
+    contact_number = serializers.CharField(max_length=15)
+    otp = serializers.CharField(max_length=6)

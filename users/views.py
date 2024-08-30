@@ -6,15 +6,15 @@ from django.contrib.auth import get_user_model, authenticate
 
 from installation.models import VehicleInstallation
 from .serializers import (CustomUserSerializer, LoginSerializer, BranchSerializer, ManagerSerializer,
-                          ContactAttemptSerializer, NotificationSerializer, CustomUserUpdateSerializer)
+                          ContactAttemptSerializer, NotificationSerializer, CustomUserUpdateSerializer,
+                          OTPRequestUserSerializer, OTPVerifyUserSerializer)
 from .models import UserTypes, Branch, ContactAttempt, CustomUser, Notification
 from rest_framework.authtoken.models import Token
 from installation.utils import IsAdminUser, IsAdminOrManager
 from django.shortcuts import get_object_or_404
 from django.core.mail import send_mail, BadHeaderError
 from smtplib import SMTPException
-
-
+from .utils import generate_otp, send_otp_via_twilio, verify_otp
 
 
 class UserRegistrationView(APIView):
@@ -68,6 +68,42 @@ class LoginView(APIView):
 
             return Response({"non_field_errors": ["Invalid email or password."]}, status=status.HTTP_400_BAD_REQUEST)
 
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class SendOTPUserView(APIView):
+    def post(self, request):
+        serializer = OTPRequestUserSerializer(data=request.data)
+        if serializer.is_valid():
+            contact_number = serializer.validated_data['contact_number']
+            otp = generate_otp(contact_number)
+            send_otp_via_twilio(contact_number, otp)
+            return Response({"message": "OTP sent successfully."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class VerifyOTPUserView(APIView):
+    def post(self, request):
+        serializer = OTPVerifyUserSerializer(data=request.data)
+        if serializer.is_valid():
+            contact_number = serializer.validated_data['contact_number']
+            otp = serializer.validated_data['otp']
+            if verify_otp(contact_number, otp):
+                try:
+                    # Fetch the user associated with the contact number
+                    user = CustomUser.objects.get(contact_number=contact_number)
+
+                    # Create or get a token for the user
+                    token, created = Token.objects.get_or_create(user=user)
+
+                    return Response({
+                        "message": "OTP verified successfully.",
+                        "token": token.key,
+                        "user_id": user.id,
+                        "email": user.email,
+                        "username": user.username
+                    }, status=status.HTTP_200_OK)
+                except CustomUser.DoesNotExist:
+                    return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserUpdateView(APIView):
