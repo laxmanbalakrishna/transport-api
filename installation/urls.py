@@ -4,7 +4,7 @@ from .views import (
     UpdateInstallationView,
     ListInstallationView,
     DeleteInstallationView, RecentVehicleInstallationView, BranchRecentVehicleInstallationView,
-    BranchWiseRecentVehicleInstallationView, SendOTPView, VerifyOTPView
+    BranchWiseRecentVehicleInstallationView, SendOTPView, VerifyOTPView,  compare_branch_outputs
 )
 
 urlpatterns = [
@@ -18,6 +18,7 @@ urlpatterns = [
     path('installations/branch-wise-recent-vehicle/', BranchWiseRecentVehicleInstallationView.as_view(),
          name='branch-wise-recent-vehicle-installation'),
     path('installations/recent-installation/<int:branch_id>/', BranchRecentVehicleInstallationView.as_view(), name='branch-recent-installation'),
+    path('installations/compare-output/', compare_branch_outputs, name='compare-branch-output'),
 ]
 
 

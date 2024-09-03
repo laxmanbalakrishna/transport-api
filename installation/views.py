@@ -1,3 +1,4 @@
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -13,6 +14,7 @@ from .serializers import VehicleInstallationSerializer, RecentVehicleInstallatio
 from .utils import IsAdminUser, IsAdminOrManager
 from django.db.models import Max
 from users.models import UserTypes
+from django.db.models import Count, F
 from rest_framework.authtoken.models import Token
 
 
@@ -248,3 +250,55 @@ class BranchRecentVehicleInstallationView(APIView):
         # Step 5: Serialize and return the data
         serializer = RecentVehicleInstallationSerializer(recent_installation)
         return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def compare_branch_outputs(request):
+    permission_classes = [IsAuthenticated]
+    user = request.user
+
+    # Debug output
+    print(f"User: {user}")
+
+    try:
+        # Attempt to get the UserTypes instance related to the user
+        user_types = UserTypes.objects.get(user=user)
+        print(f"User Types: {user_types.user_type}")
+        print(f"Branch: {user_types.branch}")
+    except UserTypes.DoesNotExist:
+        return Response({"error": "User types information not found."}, status=404)
+
+    # Check if the user is a manager
+    if user_types.user_type != 'Manager':
+        return Response({"error": "Only managers can access this information."}, status=403)
+
+    # Get the branch assigned to the manager
+    branch = user_types.branch
+    if not branch:
+        return Response({"error": "Branch not found for this manager."}, status=404)
+
+    # Get installation counts for the manager's branch
+    manager_installations = VehicleInstallation.objects.filter(branch=branch).count()
+
+    # Get installation counts for other branches
+    other_branches = Branch.objects.exclude(id=branch.id)
+    other_branch_installations = VehicleInstallation.objects.filter(branch__in=other_branches) \
+        .values('branch__name') \
+        .annotate(total_installations=Count('id'))
+
+    # Prepare the response data
+    response_data = {
+        'manager_branch': {
+            'branch_name': branch.name,
+            'total_installations': manager_installations
+        },
+        'other_branches': [
+            {
+                'branch_name': item['branch__name'],
+                'total_installations': item['total_installations']
+            } for item in other_branch_installations
+        ]
+    }
+
+    return Response(response_data)
