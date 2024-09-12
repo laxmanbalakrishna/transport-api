@@ -20,7 +20,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
-    salary_details = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    salary_details = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
 
     class Meta:
         model = CustomUser

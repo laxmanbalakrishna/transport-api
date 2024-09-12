@@ -20,6 +20,7 @@ def send_otp_via_twilio(contact_number, otp):
     return message.sid
 
 def verify_otp(contact_number, input_otp):
+    contact_number = contact_number.strip()
     cache_key = f"otp_{contact_number}"
     stored_otp = cache.get(cache_key)
     if stored_otp and str(stored_otp) == str(input_otp):

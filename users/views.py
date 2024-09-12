@@ -70,6 +70,18 @@ class LoginView(APIView):
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class LogoutView(APIView):
+    permission_classes = [IsAuthenticated]
+    def post(self, request):
+        try:
+            # Delete the user's token to logout
+            request.user.auth_token.delete()
+            return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+        except Token.DoesNotExist:
+            return Response({'message': 'User is not logged in.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class SendOTPUserView(APIView):
     def post(self, request):
         serializer = OTPRequestUserSerializer(data=request.data)
@@ -91,6 +103,10 @@ class VerifyOTPUserView(APIView):
                     # Fetch the user associated with the contact number
                     user = CustomUser.objects.get(contact_number=contact_number)
 
+                    # Fetch the user_type from the UserTypes model
+                    user_type_record = UserTypes.objects.get(user=user)
+                    user_type = user_type_record.user_type
+
                     # Create or get a token for the user
                     token, created = Token.objects.get_or_create(user=user)
 
@@ -99,12 +115,17 @@ class VerifyOTPUserView(APIView):
                         "token": token.key,
                         "user_id": user.id,
                         "email": user.email,
-                        "username": user.username
+                        "username": user.username,
+                        "user_type": user_type
                     }, status=status.HTTP_200_OK)
                 except CustomUser.DoesNotExist:
                     return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
-            return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                except UserTypes.DoesNotExist:
+                    return Response({"error": "User type not found."}, status=status.HTTP_404_NOT_FOUND)
+            else:
+                return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class UserUpdateView(APIView):
     permission_classes = [IsAuthenticated, IsAdminOrManager]
