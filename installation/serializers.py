@@ -15,7 +15,7 @@ class VehicleInstallationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'owner_name', 'contact_number', 'vehicle_class',
             'registration_number', 'insurance_details', 'datetime_installed',
-            'status', 'branch', 'branch_id'
+            'status', 'branch', 'branch_id', 'user_type'
         ]
 
     def validate_vehicle_class(self, value):

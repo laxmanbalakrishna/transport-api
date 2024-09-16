@@ -24,6 +24,7 @@ class CreateInstallationView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAdminUser]
 
+
     def post(self, request):
         serializer = VehicleInstallationSerializer(data=request.data)
         if serializer.is_valid():
@@ -163,6 +164,8 @@ class VerifyOTPView(APIView):
                         "token": token.token,
                         "vehicle_id": vehicle.id,
                         "registration_number": vehicle.registration_number,
+                        "username": vehicle.owner_name,
+                        "user_type": vehicle.user_type,
                         "status": vehicle.status
                     }, status=status.HTTP_200_OK)
                 except VehicleInstallation.DoesNotExist:
