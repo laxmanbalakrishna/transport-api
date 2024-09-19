@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model, authenticate
 
 from installation.models import VehicleInstallation
-from .serializers import (CustomUserSerializer, LoginSerializer, BranchSerializer, ManagerSerializer,
+from .serializers import (CustomUserSerializer, LoginSerializer, BranchSerializer, ListAdminManagerSerializer,
                           ContactAttemptSerializer, NotificationSerializer, CustomUserUpdateSerializer,
                           OTPRequestUserSerializer, OTPVerifyUserSerializer)
 from .models import UserTypes, Branch, ContactAttempt, CustomUser, Notification
@@ -139,6 +139,58 @@ class UserUpdateView(APIView):
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class ManagerDeleteView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def delete(self, request, pk=None):
+        # Ensure that only Admins can delete a Manager
+        user = get_object_or_404(CustomUser, pk=pk)
+
+        # Check if the user is a Manager
+        user_type_instance = get_object_or_404(UserTypes, user=user)
+        if user_type_instance.user_type != 'Manager':
+            return Response(
+                {'error': 'Only Managers can be deleted using this endpoint.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # If all checks pass, delete the Manager
+        user.delete()
+        return Response({'message': 'Manager deleted successfully'}, status=status.HTTP_200_OK)
+
+class ListAdminsView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminOrManager]
+
+    def get(self, request):
+        admins = UserTypes.objects.filter(user_type='Admin')
+        serializer = ListAdminManagerSerializer(admins, many=True)
+        admins_count = admins.count()
+
+        response_data = {
+            'count': admins_count,  # Add the count field to the response
+            'admins': serializer.data  # Include the serialized data for managers
+        }
+
+        return Response(response_data, status=200)
+
+class ListManagersView(APIView):
+    """
+    View to list all Managers and their associated branch information.
+    Accessible only to authenticated users.
+    """
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def get(self, request):
+        managers = UserTypes.objects.filter(user_type='Manager')
+        serializer = ListAdminManagerSerializer(managers, many=True)
+        manager_count = managers.count()
+
+        response_data = {
+            'count': manager_count,  # Add the count field to the response
+            'managers': serializer.data  # Include the serialized data for managers
+        }
+
+        return Response( response_data, status=200)
 
 
 class BranchCRUDView(APIView):
@@ -181,17 +233,6 @@ class BranchCRUDView(APIView):
         return Response({'message': 'Branch deleted successfully'}, status=status.HTTP_200_OK)
 
 
-class ListManagersView(APIView):
-    """
-    View to list all Managers and their associated branch information.
-    Accessible only to authenticated users.
-    """
-    permission_classes = [IsAuthenticated, IsAdminUser]
-
-    def get(self, request):
-        managers = UserTypes.objects.filter(user_type='Manager')
-        serializer = ManagerSerializer(managers, many=True)
-        return Response(serializer.data, status=200)
 
 
 class ContactAdminView(APIView):

@@ -211,7 +211,7 @@ class BranchSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'location']
 
 
-class ManagerSerializer(serializers.ModelSerializer):
+class ListAdminManagerSerializer(serializers.ModelSerializer):
     branch = BranchSerializer()  # Include the branch information
 
     class Meta:
@@ -222,6 +222,7 @@ class ManagerSerializer(serializers.ModelSerializer):
 
     def get_user(self, obj):
         return {
+            'id':obj.user.id,
             'username': obj.user.username,
             'email': obj.user.email,
             'date_of_joining': obj.user.date_of_joining,

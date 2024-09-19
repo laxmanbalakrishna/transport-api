@@ -3,11 +3,13 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import NotFound, PermissionDenied
 from django.http import HttpResponse
 from users.models import Branch
 from users.serializers import BranchSerializer
 from users.utils import generate_otp, send_otp_via_twilio, verify_otp
+from .authentication import VehicleTokenAuthentication
 from .models import VehicleInstallation, VehicleToken
 from .serializers import VehicleInstallationSerializer, RecentVehicleInstallationSerializer, OTPRequestSerializer, \
     OTPVerifySerializer
@@ -75,6 +77,7 @@ class ListInstallationView(APIView):
     """
     View to list all Vehicle Installations. Accessible to Admins and Managers.
     """
+    authentication_classes = [TokenAuthentication]  # For Admin/Manager
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
@@ -100,6 +103,35 @@ class ListInstallationView(APIView):
             'installations': serializer.data
         }, status=status.HTTP_200_OK)
 
+class ListInstallationInstalledUserView(APIView):
+    """
+    View to list all Vehicle Installations. Accessible to Installed Users.
+    """
+    authentication_classes = [VehicleTokenAuthentication]
+
+    def get(self, request):
+        user = request.user
+
+        # The user should be authenticated by VehicleTokenAuthentication
+        if not user:
+            return Response({'message': 'Authentication required.'}, status=status.HTTP_403_FORBIDDEN)
+
+            # Fetch the user_type from VehicleInstallation model
+            # Determine the user type based on the model data
+        if hasattr(user, 'contact_number'):
+            contact_number = user.contact_number
+            # Fetch installations associated with the contact number of the installed user
+            installations = VehicleInstallation.objects.filter(contact_number=contact_number)
+        else:
+            return Response({'message': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = VehicleInstallationSerializer(installations, many=True)
+        installation_count = installations.count()
+
+        return Response({
+            'count': installation_count,
+            'installations': serializer.data
+        }, status=status.HTTP_200_OK)
 
 class DeleteInstallationView(APIView):
     """
@@ -153,7 +185,11 @@ class VerifyOTPView(APIView):
             if verify_otp(contact_number, otp):
                 try:
                     # Fetch the vehicle installation associated with the contact number
-                    vehicle = VehicleInstallation.objects.get(contact_number=contact_number)
+                    vehicles = VehicleInstallation.objects.filter(contact_number=contact_number)
+
+                    if vehicles.exists():
+                        # If multiple vehicles exist, handle them (for example, return the first one or return a list)
+                        vehicle = vehicles.first()  # You can change this logic if needed
 
                     # Create or get a token for VehicleToken model
                     token, created = VehicleToken.objects.get_or_create(vehicle=vehicle)
@@ -174,6 +210,23 @@ class VerifyOTPView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # end of Normal users otp based login views
+
+class LogoutView(APIView):
+    authentication_classes = [VehicleTokenAuthentication]
+
+    def post(self, request):
+        try:
+            # Manually check if the token exists
+            if not request.auth:
+                return Response({'message': 'Installed User is not logged in.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Delete the vehicle token to log out the user
+            request.auth.delete()
+            return Response({'message': 'Successfully logged out.'}, status=status.HTTP_200_OK)
+        except VehicleToken.DoesNotExist:
+            return Response({'message': 'Installed User is not logged in.'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class RecentVehicleInstallationView(APIView):
     """
