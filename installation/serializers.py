@@ -47,3 +47,13 @@ class RecentVehicleInstallationSerializer(serializers.ModelSerializer):
         fields = ['id', 'owner_name', 'contact_number', 'vehicle_class',
                   'registration_number', 'insurance_details', 'datetime_installed',
                   'status', 'branch']
+
+class RecentVehicleInstallationCountSerializer(serializers.ModelSerializer):
+    branch = BranchSerializer(read_only=True)
+    installation_count = serializers.IntegerField()
+
+    class Meta:
+        model = VehicleInstallation
+        fields = ['id', 'owner_name', 'contact_number', 'vehicle_class',
+                  'registration_number', 'insurance_details', 'datetime_installed',
+                  'status', 'branch', 'installation_count']

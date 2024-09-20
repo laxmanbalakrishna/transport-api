@@ -12,7 +12,7 @@ from users.utils import generate_otp, send_otp_via_twilio, verify_otp
 from .authentication import VehicleTokenAuthentication
 from .models import VehicleInstallation, VehicleToken
 from .serializers import VehicleInstallationSerializer, RecentVehicleInstallationSerializer, OTPRequestSerializer, \
-    OTPVerifySerializer
+    OTPVerifySerializer, RecentVehicleInstallationCountSerializer
 from .utils import IsAdminUser, IsAdminOrManager
 from django.db.models import Max
 from users.models import UserTypes
@@ -245,9 +245,30 @@ class RecentVehicleInstallationView(APIView):
             return Response({'message': 'No vehicle installations found.'}, status=status.HTTP_404_NOT_FOUND)
 
 
+# class BranchWiseRecentVehicleInstallationView(APIView):
+#     """
+#     View to get the most recently installed vehicle for each branch.
+#     """
+#     permission_classes = [IsAuthenticated, IsAdminUser]
+#
+#     def get(self, request):
+#         # Step 1: Get the most recent installation date for each branch
+#         recent_dates = VehicleInstallation.objects.values('branch').annotate(
+#             most_recent_date=Max('datetime_installed')
+#         ).values('branch', 'most_recent_date')
+#
+#         # Step 2: Get the VehicleInstallation records for those recent dates
+#         recent_installations = VehicleInstallation.objects.filter(
+#             datetime_installed__in=[entry['most_recent_date'] for entry in recent_dates]
+#         ).order_by('branch', '-datetime_installed')
+#
+#         # Step 3: Serialize and return the data
+#         serializer = RecentVehicleInstallationSerializer(recent_installations, many=True)
+#         return Response(serializer.data)
+
 class BranchWiseRecentVehicleInstallationView(APIView):
     """
-    View to get the most recently installed vehicle for each branch.
+    View to get the most recently installed vehicle for each branch along with the count of installations.
     """
     permission_classes = [IsAuthenticated, IsAdminUser]
 
@@ -255,15 +276,18 @@ class BranchWiseRecentVehicleInstallationView(APIView):
         # Step 1: Get the most recent installation date for each branch
         recent_dates = VehicleInstallation.objects.values('branch').annotate(
             most_recent_date=Max('datetime_installed')
-        ).values('branch', 'most_recent_date')
+        )
 
-        # Step 2: Get the VehicleInstallation records for those recent dates
+        # Step 2: Get the VehicleInstallation records for the most recent dates and add installation count
         recent_installations = VehicleInstallation.objects.filter(
+            branch__in=[entry['branch'] for entry in recent_dates],
             datetime_installed__in=[entry['most_recent_date'] for entry in recent_dates]
-        ).order_by('branch', '-datetime_installed')
+        ).annotate(
+            installation_count=Count('branch__vehicles')
+        )
 
         # Step 3: Serialize and return the data
-        serializer = RecentVehicleInstallationSerializer(recent_installations, many=True)
+        serializer = RecentVehicleInstallationCountSerializer(recent_installations, many=True)
         return Response(serializer.data)
 
 
