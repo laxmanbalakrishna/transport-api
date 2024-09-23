@@ -134,12 +134,12 @@ class CustomUserUpdateSerializer(serializers.ModelSerializer):
                 errors['branch'] = "You cannot change your own branch."
 
             if request_user_type_instance.user_type == 'Admin':
-                for field in ['date_of_joining', 'salary_details', 'contact_number']:
+                for field in ['date_of_joining', 'salary_details']:
                     if field in data:
                         errors[field] = f"{field.replace('_', ' ').title()} cannot be changed by Admins."
 
             elif request_user_type_instance.user_type == 'Manager':
-                for field in ['date_of_joining', 'salary_details', 'user_type', 'branch', 'contact_number']:
+                for field in ['date_of_joining', 'salary_details', 'user_type', 'branch']:
                     if field in data:
                         errors[field] = f"{field.replace('_', ' ').title()} cannot be changed by Managers."
 

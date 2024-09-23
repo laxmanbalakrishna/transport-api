@@ -3,12 +3,14 @@ from django.urls import path
 from installation.views import RecentVehicleInstallationView
 from .views import (UserRegistrationView, LoginView, BranchCRUDView, ListManagersView, ContactAdminView,
                     ListContactAttemptsView, AdminNotificationView, UserUpdateView, SendOTPUserView,
-                    VerifyOTPUserView, LogoutView, ManagerDeleteView, ListAdminsView)
+                    VerifyOTPUserView, LogoutView, ManagerDeleteView, ListAdminsView, ChangePasswordView, ProfileView)
 
 urlpatterns = [
     path('register/',  UserRegistrationView.as_view(), name='register'),
     path('login/', LoginView.as_view(), name='login'),
     path('logout/', LogoutView.as_view(), name='logout'),
+    path('change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('profile-view/', ProfileView.as_view(), name='profile-view'),
     path('user/send-otp/', SendOTPUserView.as_view(), name='send_otp'),
     path('user/verify-otp/', VerifyOTPUserView.as_view(), name='verify_otp'),
     path('users/update/<uuid:pk>/', UserUpdateView.as_view(), name='user-update'),

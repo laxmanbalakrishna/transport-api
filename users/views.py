@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth.hashers import check_password
 
 from installation.models import VehicleInstallation
 from .serializers import (CustomUserSerializer, LoginSerializer, BranchSerializer, ListAdminManagerSerializer,
@@ -60,6 +61,7 @@ class LoginView(APIView):
                         "user_id": user.id,
                         "email": user.email,
                         "username": user.username,
+                        "contact_number":user.contact_number,
                         "user_type": user_type_instance.user_type if user_type_instance else None,
                         "branch": user_type_instance.branch.name if user_type_instance and user_type_instance.branch else None
                     }, status=status.HTTP_200_OK)
@@ -81,6 +83,66 @@ class LogoutView(APIView):
             return Response({'message': 'User is not logged in.'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ChangePasswordView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        data = request.data
+
+        # Get the old and new passwords from the request data
+        old_password = data.get("old_password")
+        new_password = data.get("new_password")
+        confirm_password = data.get("confirm_password")
+
+        # Check if the old password is correct
+        if not check_password(old_password, user.password):
+            return Response({"error": "Old password is incorrect"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if the new password matches the confirm password
+        if new_password != confirm_password:
+            return Response({"error": "New passwords do not match"}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Set the new password
+        user.set_password(new_password)
+        user.save()
+
+        return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get the logged-in user
+        user = request.user
+
+
+        try:
+            # Fetch the user_type and branch from the UserTypes model
+            user_type_entry = UserTypes.objects.get(user=user)
+            user_type = user_type_entry.user_type
+            branch = user_type_entry.branch.name if user_type_entry.branch else None
+        except UserTypes.DoesNotExist:
+            return Response({"error": "User type not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+        # Assuming you want to return some user profile fields
+        profile_data = {
+            "user_id":user.id,
+            "email": user.email,
+            "username": user.username,
+            "contact_number": user.contact_number,
+            "salary_details": user.salary_details,
+            "user_type": user_type,
+            "branch": branch
+        }
+
+        return Response(profile_data, status=status.HTTP_200_OK)
+
+
+
 
 class SendOTPUserView(APIView):
     def post(self, request):
@@ -116,6 +178,7 @@ class VerifyOTPUserView(APIView):
                         "user_id": user.id,
                         "email": user.email,
                         "username": user.username,
+                        "contact_number": user.contact_number,
                         "user_type": user_type
                     }, status=status.HTTP_200_OK)
                 except CustomUser.DoesNotExist:
