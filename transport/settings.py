@@ -156,12 +156,19 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-EMAIL_BACKEND = secrets['EMAIL_BACKEND']
-EMAIL_HOST = secrets['EMAIL_HOST']
-EMAIL_PORT = int(secrets['EMAIL_PORT'])  # Convert to integer
-EMAIL_USE_TLS = secrets['EMAIL_USE_TLS'] == 'True'  # Convert to boolean
-EMAIL_HOST_USER = secrets['EMAIL_HOST_USER']
-EMAIL_HOST_PASSWORD = secrets['EMAIL_HOST_PASSWORD']
+# EMAIL_BACKEND = secrets['EMAIL_BACKEND']
+# EMAIL_HOST = secrets['EMAIL_HOST']
+# EMAIL_PORT = int(secrets['EMAIL_PORT'])  # Convert to integer
+# EMAIL_USE_TLS = secrets['EMAIL_USE_TLS'] == 'True'  # Convert to boolean
+# EMAIL_HOST_USER = secrets['EMAIL_HOST_USER']
+# EMAIL_HOST_PASSWORD = secrets['EMAIL_HOST_PASSWORD']
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Your email host
+EMAIL_PORT = 465  # Your email port
+EMAIL_USE_SSL = True
+EMAIL_HOST_USER = 'balakrishnagujjeti9@gmail.com'
+EMAIL_HOST_PASSWORD='baxi qwcq ywaj fjpx'
 
 TWILIO_ACCOUNT_SID= secrets['TWILIO_ACCOUNT_SID']
 TWILIO_AUTH_TOKEN = secrets['TWILIO_AUTH_TOKEN']

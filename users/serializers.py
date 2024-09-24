@@ -232,10 +232,11 @@ class ListAdminManagerSerializer(serializers.ModelSerializer):
 
 class ContactAttemptSerializer(serializers.ModelSerializer):
     admin = serializers.PrimaryKeyRelatedField(queryset=CustomUser.objects.filter(usertypes__user_type='Admin'))
+    user = serializers.CharField(source='user.username', read_only=True)
 
     class Meta:
         model = ContactAttempt
-        fields = ['admin', 'message']
+        fields = ['admin', 'user', 'message', 'created_at']
 
     def create(self, validated_data):
         user = self.context['request'].user
