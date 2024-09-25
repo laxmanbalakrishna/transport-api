@@ -367,8 +367,35 @@ class ListContactAttemptsView(APIView):
         # Get contact attempts only for the logged-in admin
         contact_attempts = ContactAttempt.objects.filter(admin=user)
         serializer = ContactAttemptSerializer(contact_attempts, many=True)
+        contact_attempts_count = contact_attempts.count()
 
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response_data = {
+            'count': contact_attempts_count,  # Add the count field to the response
+            'contact_attempts': serializer.data  # Include the serialized data for managers
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)
+
+
+class DeleteContactAttemptView(APIView):
+    permission_classes = [IsAuthenticated, IsAdminUser]
+
+    def delete(self, request, pk):
+        try:
+            # Get the admin making the request
+            admin = request.user
+
+            # Get the contact attempt by id (pk) and ensure it belongs to the admin
+            contact_attempt = ContactAttempt.objects.get(pk=pk, admin=admin)
+
+            # Delete the contact attempt
+            contact_attempt.delete()
+
+            return Response({"detail": "Contact attempt deleted successfully."}, status=status.HTTP_200_OK)
+
+        except ContactAttempt.DoesNotExist:
+            return Response({"detail": "Contact attempt not found or you are not authorized to delete it."},
+                            status=status.HTTP_404_NOT_FOUND)
 
 
 class AdminNotificationView(APIView):

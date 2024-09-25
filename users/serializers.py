@@ -236,7 +236,7 @@ class ContactAttemptSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ContactAttempt
-        fields = ['admin', 'user', 'message', 'created_at']
+        fields = ['id','admin', 'user', 'message', 'created_at']
 
     def create(self, validated_data):
         user = self.context['request'].user

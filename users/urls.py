@@ -3,7 +3,8 @@ from django.urls import path
 from installation.views import RecentVehicleInstallationView
 from .views import (UserRegistrationView, LoginView, BranchCRUDView, ListManagersView, ContactAdminView,
                     ListContactAttemptsView, AdminNotificationView, UserUpdateView, SendOTPUserView,
-                    VerifyOTPUserView, LogoutView, ManagerDeleteView, ListAdminsView, ChangePasswordView, ProfileView)
+                    VerifyOTPUserView, LogoutView, ManagerDeleteView, ListAdminsView, ChangePasswordView, ProfileView,
+                    DeleteContactAttemptView)
 
 urlpatterns = [
     path('register/',  UserRegistrationView.as_view(), name='register'),
@@ -25,5 +26,6 @@ urlpatterns = [
     path('recent-vehicle/', RecentVehicleInstallationView.as_view(), name='recent-vehicle-installation'),
     path('contact-admin/', ContactAdminView.as_view(), name='contact-admin'),
     path('admin-contact-attempts/', ListContactAttemptsView.as_view(), name='list-contact-attempts'),
+    path('delete-contact-attempt/<int:pk>/', DeleteContactAttemptView.as_view(), name='delete_contact_attempt'),
     path('admin-notifications/', AdminNotificationView.as_view(), name='admin-notifications'),
 ]
