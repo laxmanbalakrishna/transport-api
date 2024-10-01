@@ -124,6 +124,7 @@ class ProfileView(APIView):
             user_type_entry = UserTypes.objects.get(user=user)
             user_type = user_type_entry.user_type
             branch = user_type_entry.branch.name if user_type_entry.branch else None
+            branch_id = user_type_entry.branch.id if user_type_entry.branch else None
         except UserTypes.DoesNotExist:
             return Response({"error": "User type not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -136,6 +137,7 @@ class ProfileView(APIView):
             "contact_number": user.contact_number,
             "salary_details": user.salary_details,
             "user_type": user_type,
+            "branch_id":branch_id,
             "branch": branch
         }
 

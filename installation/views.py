@@ -17,6 +17,7 @@ from .utils import IsAdminUser, IsAdminOrManager
 from django.db.models import Max
 from users.models import UserTypes
 from django.db.models import Count, F
+from django.db.models.functions import Coalesce
 from rest_framework.authtoken.models import Token
 
 
@@ -132,6 +133,38 @@ class ListInstallationInstalledUserView(APIView):
             'count': installation_count,
             'installations': serializer.data
         }, status=status.HTTP_200_OK)
+
+class InstalledUserProfileView(APIView):
+    """
+    View to Access Profile . Accessible to Installed Users.
+    """
+    authentication_classes = [VehicleTokenAuthentication]
+
+    def get(self, request):
+        user = request.user
+
+        # The user should be authenticated by VehicleTokenAuthentication
+        if not user:
+            return Response({'message': 'Authentication required.'}, status=status.HTTP_403_FORBIDDEN)
+
+            # Fetch the user_type from VehicleInstallation model
+            # Determine the user type based on the model data
+        if hasattr(user, 'contact_number'):
+            contact_number = user.contact_number
+            # Fetch installations associated with the contact number of the installed user
+            installations = VehicleInstallation.objects.filter(contact_number=contact_number)
+
+            # If no installations are found, handle this case
+            if not installations.exists():
+                return Response({'message': 'No installations found.'}, status=status.HTTP_404_NOT_FOUND)
+
+            installation = installations.first()
+        else:
+            return Response({'message': 'Unauthorized.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = VehicleInstallationSerializer(installation)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class DeleteInstallationView(APIView):
     """
@@ -361,11 +394,10 @@ def compare_branch_outputs(request):
     # Get installation counts for the manager's branch
     manager_installations = VehicleInstallation.objects.filter(branch=branch).count()
 
-    # Get installation counts for other branches
-    other_branches = Branch.objects.exclude(id=branch.id)
-    other_branch_installations = VehicleInstallation.objects.filter(branch__in=other_branches) \
-        .values('branch__name') \
-        .annotate(total_installations=Count('id'))
+    # Get installation counts for other branches (with branches having 0 installations as well)
+    other_branch_installations = Branch.objects.exclude(id=branch.id) \
+        .annotate(total_installations=Coalesce(Count('vehicles'), 0)) \
+        .values('name', 'total_installations')
 
     # Prepare the response data
     response_data = {
@@ -375,7 +407,7 @@ def compare_branch_outputs(request):
         },
         'other_branches': [
             {
-                'branch_name': item['branch__name'],
+                'branch_name': item['name'],
                 'total_installations': item['total_installations']
             } for item in other_branch_installations
         ]
