@@ -14,3 +14,4 @@ django-rest-passwordreset==1.4.1
 djangorestframework-simplejwt==5.3.1
 twilio==9.2.4
 gunicorn==23.0.0
+dj-database-url==2.2.0
