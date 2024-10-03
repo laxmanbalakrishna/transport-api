@@ -108,7 +108,7 @@ WSGI_APPLICATION = 'transport.wsgi.application'
 #         'PORT': secrets["PORT"]
 #     }
 # }
-DATABASE_URL = 'postgresql://transport:quz7GoYfXUiaOG5FqLmWPEMAPFWusLHm@dpg-crv2v408fa8c73cq55m0-a.singapore-postgres.render.com/transport_loj3'
+DATABASE_URL = secrets["DATABASE_URL"]
 import os
 import dj_database_url
 
