@@ -28,7 +28,8 @@ SECRET_KEY = secrets['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['https://transport-api-q7km.onrender.com']
+ALLOWED_HOSTS = ['transport-api-q7km.onrender.com']
+
 
 
 # Application definition
