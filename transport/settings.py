@@ -26,9 +26,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = secrets['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ['https://transport-api-q7km.onrender.com']
 
 
 # Application definition
@@ -97,15 +97,22 @@ WSGI_APPLICATION = 'transport.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': secrets["NAME"],
+#         'USER': secrets["USER"],
+#         'PASSWORD': secrets["PASSWORD"],
+#         'HOST': secrets["HOST"],
+#         'PORT': secrets["PORT"]
+#     }
+# }
+DATABASE_URL = 'postgresql://transport:quz7GoYfXUiaOG5FqLmWPEMAPFWusLHm@dpg-crv2v408fa8c73cq55m0-a.singapore-postgres.render.com/transport_loj3'
+import os
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': secrets["NAME"],
-        'USER': secrets["USER"],
-        'PASSWORD': secrets["PASSWORD"],
-        'HOST': secrets["HOST"],
-        'PORT': secrets["PORT"]
-    }
+    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
 }
 
 AUTH_USER_MODEL = 'users.CustomUser'
