@@ -29,6 +29,7 @@ SECRET_KEY = secrets['SECRET_KEY']
 DEBUG = False
 
 ALLOWED_HOSTS = ['transport-api-q7km.onrender.com']
+# ALLOWED_HOSTS =['*']
 
 
 
@@ -61,6 +62,7 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js development server
+    "https://transport-ui-gilt.vercel.app/"
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -108,7 +110,6 @@ WSGI_APPLICATION = 'transport.wsgi.application'
 #         'PORT': secrets["PORT"]
 #     }
 # }
-DATABASE_URL = secrets["DATABASE_URL"]
 import os
 import dj_database_url
 
