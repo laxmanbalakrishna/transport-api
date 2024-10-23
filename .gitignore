@@ -1,3 +1,29 @@
-/.idea
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+/presalesEstimator_api/__pycache__
+/presalesApp/__pycache__
+/presalesApp/migrations/__pycache__
+/presalesApp/migrations/000*
+# Environment
+/env
 /myenv
-/.env
+/venv
+
+# testing
+/coverage
+
+# production
+
+
+# misc
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env
+
+
+*.pyc
+__pycache__/
+*.xml
+*.iml
